@@ -34,8 +34,8 @@ void setup() {
 
 void loop() {
   float dist_raw;
-  float dist_filltered;
-
+  float dist_filtered;
+  
   // wait until next sampling time. 
   // millis() returns the number of milliseconds since the program started. 
   //    will overflow after 50 days.
@@ -46,18 +46,24 @@ void loop() {
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
 
     //##dist_filterd = function of (dist_raw, _DIST_MIN, _DIST_MAX, dist_prev);
+  
   dist_prev = dist_filtered;
 
-  if(dist_raw == 0 || dist_raw >= _DIST_MAX)
+  if (dist_raw == 0 || dist_raw >= _DIST_MAX || dist_raw <= _DIST_MIN) 
   {
-    dist_ema = dist_prev;
-  }
-  //##dist_ema = function of (dist_filtered, _EMA_ALPHA, dist_ema);
-  // Modify the below line to implement the EMA equation
-  else
+    dist_filtered = dist_prev;  // 이전 유효 거리값 사용
+  } 
+
+  else 
   {
-    dist_ema = dist_raw;
+    dist_filtered = dist_raw;  // 유효한 값이면 그대로 사용
   }
+
+  // EMA 공식 적용
+  dist_ema = _EMA_ALPHA * dist_filtered + (1 - _EMA_ALPHA) * dist_ema;
+
+  dist_prev = dist_filtered;
+  
   // output the distance to the serial port
   Serial.print("Min:");   Serial.print(_DIST_MIN);
   Serial.print(",raw:");  Serial.print(dist_raw);

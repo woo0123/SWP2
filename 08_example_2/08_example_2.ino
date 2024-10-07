@@ -5,7 +5,7 @@
 
 // configurable parameters
 #define SND_VEL 346.0     // sound velocity at 24 celsius degree (unit: m/sec)
-#define INTERVAL 100      // sampling interval (unit: msec)
+#define INTERVAL 25     // sampling interval (unit: msec)
 #define PULSE_DURATION 10 // ultra-sound Pulse Duration (unit: usec)
 #define _DIST_MIN 100.0   // minimum distance to be measured (unit: mm)
 #define _DIST_MAX 300.0   // maximum distance to be measured (unit: mm)
@@ -37,28 +37,38 @@ void loop() {
 
   distance = USS_measure(PIN_TRIG, PIN_ECHO); // read distance
 
-  if ((distance == 0.0) || (distance > _DIST_MAX)) {
-      distance = _DIST_MAX + 10.0;    // Set Higher Value
-      digitalWrite(PIN_LED, 1);       // LED OFF
-  } else if (distance < _DIST_MIN) {
-      distance = _DIST_MIN - 10.0;    // Set Lower Value
-      digitalWrite(PIN_LED, 1);       // LED OFF
-  } else {    // In desired Range
-      digitalWrite(PIN_LED, 0);       // LED ON      
-  }
+  int brightness = 0;  // LED 밝기 (0이 가장 밝고, 255가 꺼짐)
 
-  // output the distance to the serial port
-  Serial.print("Min:");        Serial.print(_DIST_MIN);
-  Serial.print(",distance:");  Serial.print(distance);
-  Serial.print(",Max:");       Serial.print(_DIST_MAX);
-  Serial.println("");
-  
-  // do something here
-  delay(50); // Assume that it takes 50ms to do something.
-  
-  // update last sampling time
-  last_sampling_time += INTERVAL;
-}
+    // 거리에 따라 LED 밝기 제어
+    if (distance <= 100) {
+        brightness = 255;  // LED OFF (가장 어둡게)
+    } else if (distance >= 300) {
+        brightness = 255;  // LED OFF (가장 어둡게)
+    } else {
+        // 100mm에서 300mm 사이에서 밝기가 점진적으로 변하도록 설정
+        // 200mm에서 가장 밝고, 거리가 100mm 또는 300mm로 갈수록 어두워짐
+        if (distance <= 200) {
+            // 100mm에서 200mm로 갈수록 밝아짐
+            brightness = map(distance, 100, 200, 255, 0);  // 100mm에서 255, 200mm에서 0
+        } else {
+            // 200mm에서 300mm로 갈수록 어두워짐
+            brightness = map(distance, 200, 300, 0, 255);  // 200mm에서 0, 300mm에서 255
+        }
+    }
+
+    analogWrite(PIN_LED, brightness);  // 계산된 밝기로 LED 제어
+
+    // output the distance to the serial port
+    Serial.print("Min:");        Serial.print(_DIST_MIN);
+    Serial.print(",distance:");  Serial.print(distance);
+    Serial.print(",Max:");       Serial.print(_DIST_MAX);
+    Serial.println("");
+    
+    // do something here
+    
+    // update last sampling time
+    last_sampling_time += INTERVAL;
+  }
 
 // get a distance reading from USS. return value is in millimeter.
 float USS_measure(int TRIG, int ECHO)
